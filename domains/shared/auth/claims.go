@@ -3,7 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"github.com/JECSand/eventit-server/src/shared/enums"
+	"github.com/JECSand/eventit-server/domains/shared/enums"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"
 )

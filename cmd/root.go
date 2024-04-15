@@ -14,7 +14,7 @@ var cfgFile string
 var RootCmd = &cobra.Command{
 	Use:   "eventit-server",
 	Short: "A RESTful API for managing events.",
-	Long:  `A RESTful API API that manages event registration, ticketing, and payments.`,
+	Long:  `A RESTful API API that manages events registration, ticketing, and payments.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

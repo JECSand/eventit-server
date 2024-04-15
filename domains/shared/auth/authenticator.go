@@ -2,8 +2,8 @@ package auth
 
 import (
 	"context"
-	"github.com/JECSand/eventit-server/src/shared/enums"
-	"github.com/JECSand/eventit-server/src/shared/routers"
+	"github.com/JECSand/eventit-server/domains/shared/enums"
+	"github.com/JECSand/eventit-server/domains/shared/routers"
 	"net/http"
 )
 
