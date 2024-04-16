@@ -10,16 +10,16 @@ import (
 
 // DBRecord is an abstraction of the db model types
 type DBRecord interface {
-	toDoc() (doc bson.D, err error)
-	bsonFilter() (doc bson.D, err error)
-	bsonUpdate() (doc bson.D, err error)
-	bsonLoad(doc bson.D) (err error)
-	addTimeStamps(newRecord bool)
-	addObjectID()
-	postProcess() (err error)
-	getID() (id interface{})
-	update(doc interface{}) (err error)
-	match(doc interface{}) bool
+	ToDoc() (doc bson.D, err error)
+	BsonFilter() (doc bson.D, err error)
+	BsonUpdate() (doc bson.D, err error)
+	BsonLoad(doc bson.D) (err error)
+	AddTimeStamps(newRecord bool)
+	AddObjectID()
+	PostProcess() (err error)
+	GetID() (id interface{})
+	Update(doc interface{}) (err error)
+	Match(doc interface{}) bool
 }
 
 // DBCollection is an abstraction of the dbClient and testDBClient types

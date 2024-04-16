@@ -68,7 +68,7 @@ func (db *dbClient) GetCollection(collectionName string) DBCollection {
 func (db *dbClient) NewDBHandler(collectionName string) *DBRepo[DBRecord] {
 	col := db.GetCollection(collectionName)
 	return &DBRepo[DBRecord]{
-		db:         db,
-		collection: col,
+		DB:         db,
+		Collection: col,
 	}
 }

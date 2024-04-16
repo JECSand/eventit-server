@@ -10,20 +10,20 @@ import (
 
 // DBRepo is a Generic type struct for organizing dbModel methods
 type DBRepo[T DBRecord] struct {
-	db         DBClient
-	collection DBCollection
+	DB         DBClient
+	Collection DBCollection
 }
 
 // FindOne is used to get a dbModel from the db with custom filter
 func (h *DBRepo[T]) FindOne(filter T) (T, error) {
 	var m T
-	f, err := filter.bsonFilter()
+	f, err := filter.BsonFilter()
 	if err != nil {
 		return filter, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	err = h.collection.FindOne(ctx, f).Decode(&m)
+	err = h.Collection.FindOne(ctx, f).Decode(&m)
 	if err != nil {
 		return filter, err
 	}
@@ -41,7 +41,7 @@ func (h *DBRepo[T]) FindOneAsync(tCh chan T, eCh chan error, filter T, wg *sync.
 // FindMany is used to get a slice of dbModels from the db with custom filter
 func (h *DBRepo[T]) FindMany(filter T) ([]T, error) {
 	var m []T
-	f, err := filter.bsonFilter()
+	f, err := filter.BsonFilter()
 	if err != nil {
 		return m, err
 	}
@@ -49,9 +49,9 @@ func (h *DBRepo[T]) FindMany(filter T) ([]T, error) {
 	defer cancel()
 	var cur *mongo.Cursor
 	if len(f) > 0 {
-		cur, err = h.collection.Find(ctx, f)
+		cur, err = h.Collection.Find(ctx, f)
 	} else {
-		cur, err = h.collection.Find(ctx, bson.M{})
+		cur, err = h.Collection.Find(ctx, bson.M{})
 	}
 	if err != nil {
 		return m, err
@@ -61,7 +61,7 @@ func (h *DBRepo[T]) FindMany(filter T) ([]T, error) {
 	for cursor.Next(ctx) {
 		var md T
 		cursor.Decode(&md)
-		err = md.postProcess()
+		err = md.PostProcess()
 		if err != nil {
 			return m, err
 		}
@@ -72,62 +72,62 @@ func (h *DBRepo[T]) FindMany(filter T) ([]T, error) {
 
 // UpdateOne Function to update a dbModel from datasource with custom filter and update model
 func (h *DBRepo[T]) UpdateOne(filter T, m T) (T, error) {
-	f, err := filter.bsonFilter()
+	f, err := filter.BsonFilter()
 	if err != nil {
 		return m, err
 	}
-	m.addTimeStamps(false)
-	update, err := m.bsonUpdate()
+	m.AddTimeStamps(false)
+	update, err := m.BsonUpdate()
 	if err != nil {
 		return m, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	_, err = h.collection.UpdateOne(ctx, f, update)
+	_, err = h.Collection.UpdateOne(ctx, f, update)
 	if err != nil {
 		return m, err
 	}
-	err = m.postProcess()
+	err = m.PostProcess()
 	return m, err
 }
 
 // InsertOne adds a new dbModel record to a collection
 func (h *DBRepo[T]) InsertOne(m T) (T, error) {
-	m.addTimeStamps(true)
-	m.addObjectID()
+	m.AddTimeStamps(true)
+	m.AddObjectID()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err := h.collection.InsertOne(ctx, m)
+	_, err := h.Collection.InsertOne(ctx, m)
 	if err != nil {
 		return m, err
 	}
-	err = m.postProcess()
+	err = m.PostProcess()
 	return m, err
 }
 
 // DeleteOne adds a new dbModel record to a collection
 func (h *DBRepo[T]) DeleteOne(filter T) (T, error) { //TODO: to be replaced with "soft delete"
 	var m T
-	f, err := filter.bsonFilter()
+	f, err := filter.BsonFilter()
 	if err != nil {
 		return m, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err = h.collection.FindOneAndDelete(ctx, f).Decode(&m)
+	err = h.Collection.FindOneAndDelete(ctx, f).Decode(&m)
 	return m, err
 }
 
 // DeleteMany adds a new dbModel record to a collection
 func (h *DBRepo[T]) DeleteMany(filter T) (T, error) { //TODO: to be replaced with "soft delete"
 	var m T
-	f, err := filter.bsonFilter()
+	f, err := filter.BsonFilter()
 	if err != nil {
 		return m, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err = h.collection.DeleteMany(ctx, f)
+	_, err = h.Collection.DeleteMany(ctx, f)
 	return filter, err
 }
 

@@ -1,15 +1,35 @@
 package repositories
 
 import (
+	"errors"
 	"github.com/JECSand/eventit-server/domains/identity/src/models"
+	"github.com/JECSand/eventit-server/domains/shared/databases"
 	"github.com/JECSand/eventit-server/domains/shared/enums"
+	"github.com/JECSand/eventit-server/domains/shared/utilities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )
 
-// userRecord stores User information
-type userRecord struct {
+// UserRepo is used by the app to manage all user related controllers and functionality
+type UserRepo struct {
+	collection  databases.DBCollection
+	db          databases.DBClient
+	userHandler *databases.DBRepo[*UserRecord]
+}
+
+// NewUserRepo is an exported function used to initialize a new UserRepo struct
+func NewUserRepo(db databases.DBClient) *UserRepo {
+	collection := db.GetCollection("users")
+	repoHandler := &databases.DBRepo[*UserRecord]{
+		DB:         db,
+		Collection: collection,
+	}
+	return &UserRepo{collection, db, repoHandler}
+}
+
+// UserRecord stores User information
+type UserRecord struct {
 	Id        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Username  string             `json:"username" bson:"username,omitempty"`
 	Password  string             `json:"password" bson:"password,omitempty"`
@@ -23,9 +43,9 @@ type userRecord struct {
 	// GroupId      primitive.ObjectID `json:"id" bson:"group_id,omitempty"`
 }
 
-// newUserModel initializes a new pointer to a userModel struct from a pointer to a JSON User struct
-func newUserModel(u *models.User) (um *userRecord, err error) {
-	um = &userRecord{
+// newUserRecord initializes a new pointer to a userModel struct from a pointer to a JSON User struct
+func newUserRecord(u *models.User) (um *UserRecord, err error) {
+	um = &UserRecord{
 		Username:  u.Username,
 		Password:  u.Password,
 		FirstName: u.FirstName,
@@ -39,22 +59,16 @@ func newUserModel(u *models.User) (um *userRecord, err error) {
 	if u.Id != "" && u.Id != "000000000000000000000000" {
 		um.Id, err = primitive.ObjectIDFromHex(u.Id)
 	}
-	if u.GroupId != "" && u.GroupId != "000000000000000000000000" {
-		um.GroupId, err = primitive.ObjectIDFromHex(u.GroupId)
-	}
-	if u.ImageId != "" && u.ImageId != "000000000000000000000000" {
-		um.ImageId, err = primitive.ObjectIDFromHex(u.ImageId)
-	}
 	return
 }
 
-// update the userModel using an overwrite bson.D doc
-func (u *userModel) update(doc interface{}) (err error) {
-	data, err := bsonMarshall(doc)
+// Update the userModel using an overwrite bson.D doc
+func (u *UserRecord) Update(doc interface{}) (err error) {
+	data, err := utilities.BSONMarshall(doc)
 	if err != nil {
 		return
 	}
-	um := userModel{}
+	um := UserRecord{}
 	err = bson.Unmarshal(data, &um)
 	if len(um.Username) > 0 {
 		u.Username = um.Username
@@ -71,24 +85,18 @@ func (u *userModel) update(doc interface{}) (err error) {
 	if len(um.Password) > 0 {
 		u.Password = um.Password
 	}
-	if len(um.GroupId.Hex()) > 0 && um.GroupId.Hex() != "000000000000000000000000" {
-		u.GroupId = um.GroupId
-	}
-	if len(um.ImageId.Hex()) > 0 && um.ImageId.Hex() != "000000000000000000000000" {
-		u.ImageId = um.ImageId
-	}
-	if len(um.Role) > 0 {
+	if um.Role.EnumIndex() > 0 {
 		u.Role = um.Role
 	}
-	if !um.LastModified.IsZero() {
-		u.LastModified = um.LastModified
+	if !um.UpdatedAt.IsZero() {
+		u.UpdatedAt = um.UpdatedAt
 	}
 	return
 }
 
-// bsonLoad loads a bson doc into the userModel
-func (u *userModel) bsonLoad(doc bson.D) (err error) {
-	bData, err := bsonMarshall(doc)
+// BsonLoad loads a bson doc into the UserRecord
+func (u *UserRecord) BsonLoad(doc bson.D) (err error) {
+	bData, err := utilities.BSONMarshall(doc)
 	if err != nil {
 		return err
 	}
@@ -96,14 +104,14 @@ func (u *userModel) bsonLoad(doc bson.D) (err error) {
 	return err
 }
 
-// match compares an input bson doc and returns whether there's a match with the userModel
+// Match compares an input bson doc and returns whether there's a match with the UserRecord
 // TODO: Find a better way to write these model match methods
-func (u *userModel) match(doc interface{}) bool {
-	data, err := bsonMarshall(doc)
+func (u *UserRecord) Match(doc interface{}) bool {
+	data, err := utilities.BSONMarshall(doc)
 	if err != nil {
 		return false
 	}
-	um := userModel{}
+	um := UserRecord{}
 	err = bson.Unmarshal(data, &um)
 	if um.Id.Hex() != "" && um.Id.Hex() != "000000000000000000000000" {
 		if u.Id == um.Id {
@@ -117,38 +125,32 @@ func (u *userModel) match(doc interface{}) bool {
 		}
 		return false
 	}
-	if um.GroupId.Hex() != "" && um.GroupId.Hex() != "000000000000000000000000" {
-		if u.GroupId == um.GroupId {
-			return true
-		}
-		return false
-	}
 	return false
 }
 
-// getID returns the unique identifier of the userModel
-func (u *userModel) getID() (id interface{}) {
+// GetID returns the unique identifier of the UserRecord
+func (u *UserRecord) GetID() (id interface{}) {
 	return u.Id
 }
 
-// addTimeStamps updates an userModel struct with a timestamp
-func (u *userModel) addTimeStamps(newRecord bool) {
+// AddTimeStamps updates an UserRecord struct with a timestamp
+func (u *UserRecord) AddTimeStamps(newRecord bool) {
 	currentTime := time.Now().UTC()
-	u.LastModified = currentTime
+	u.UpdatedAt = currentTime
 	if newRecord {
 		u.CreatedAt = currentTime
 	}
 }
 
-// addObjectID checks if a userModel has a value assigned for Id if no value a new one is generated and assigned
-func (u *userModel) addObjectID() {
+// AddObjectID checks if a userModel has a value assigned for Id if no value a new one is generated and assigned
+func (u *UserRecord) AddObjectID() {
 	if u.Id.Hex() == "" || u.Id.Hex() == "000000000000000000000000" {
 		u.Id = primitive.NewObjectID()
 	}
 }
 
-// postProcess updates an userModel struct postProcess to do things such as removing the password field's value
-func (u *userModel) postProcess() (err error) {
+// PostProcess updates an userModel struct postProcess to do things such as removing the password field's value
+func (u *UserRecord) PostProcess() (err error) {
 	//u.Password = ""
 	if u.Email == "" {
 		err = errors.New("user record does not have an email")
@@ -157,8 +159,8 @@ func (u *userModel) postProcess() (err error) {
 	return
 }
 
-// toDoc converts the bson userModel into a bson.D
-func (u *userModel) toDoc() (doc bson.D, err error) {
+// ToDoc converts the bson userModel into a bson.D
+func (u *UserRecord) ToDoc() (doc bson.D, err error) {
 	data, err := bson.Marshal(u)
 	if err != nil {
 		return
@@ -167,21 +169,19 @@ func (u *userModel) toDoc() (doc bson.D, err error) {
 	return
 }
 
-// bsonFilter generates a bson filter for MongoDB queries from the userModel data
-func (u *userModel) bsonFilter() (doc bson.D, err error) {
+// BsonFilter generates a bson filter for MongoDB queries from the userModel data
+func (u *UserRecord) BsonFilter() (doc bson.D, err error) {
 	if u.Id.Hex() != "" && u.Id.Hex() != "000000000000000000000000" {
 		doc = bson.D{{"_id", u.Id}}
-	} else if u.GroupId.Hex() != "" && u.GroupId.Hex() != "000000000000000000000000" {
-		doc = bson.D{{"group_id", u.GroupId}}
 	} else if u.Email != "" {
 		doc = bson.D{{"email", u.Email}}
 	}
 	return
 }
 
-// bsonUpdate generates a bson update for MongoDB queries from the userModel data
-func (u *userModel) bsonUpdate() (doc bson.D, err error) {
-	inner, err := u.toDoc()
+// BsonUpdate generates a bson update for MongoDB queries from the userModel data
+func (u *UserRecord) BsonUpdate() (doc bson.D, err error) {
+	inner, err := u.ToDoc()
 	if err != nil {
 		return
 	}
@@ -189,21 +189,18 @@ func (u *userModel) bsonUpdate() (doc bson.D, err error) {
 	return
 }
 
-// toRoot creates and return a new pointer to a User JSON struct from a pointer to a BSON userModel
-func (u *userModel) toRoot() *models.User {
+// ToRoot creates and return a new pointer to a User JSON struct from a pointer to a BSON userModel
+func (u *UserRecord) ToRoot() *models.User {
 	return &models.User{
-		Id:           u.Id.Hex(),
-		Username:     u.Username,
-		Password:     u.Password,
-		FirstName:    u.FirstName,
-		LastName:     u.LastName,
-		Email:        u.Email,
-		Role:         u.Role,
-		RootAdmin:    u.RootAdmin,
-		GroupId:      u.GroupId.Hex(),
-		ImageId:      u.ImageId.Hex(),
-		LastModified: u.LastModified,
-		CreatedAt:    u.CreatedAt,
-		DeletedAt:    u.DeletedAt,
+		Id:        u.Id.Hex(),
+		Username:  u.Username,
+		Password:  u.Password,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+		Email:     u.Email,
+		Role:      u.Role,
+		UpdatedAt: u.UpdatedAt,
+		CreatedAt: u.CreatedAt,
+		DeletedAt: u.DeletedAt,
 	}
 }
