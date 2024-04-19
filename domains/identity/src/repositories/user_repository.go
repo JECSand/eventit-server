@@ -13,9 +13,9 @@ import (
 
 // UserRepo is used by the app to manage all user related controllers and functionality
 type UserRepo struct {
-	collection  databases.DBCollection
-	db          databases.DBClient
-	userHandler *databases.DBRepo[*UserRecord]
+	collection databases.DBCollection
+	db         databases.DBClient
+	Handler    *databases.DBRepo[*UserRecord]
 }
 
 // NewUserRepo is an exported function used to initialize a new UserRepo struct
@@ -43,8 +43,8 @@ type UserRecord struct {
 	// GroupId      primitive.ObjectID `json:"id" bson:"group_id,omitempty"`
 }
 
-// newUserRecord initializes a new pointer to a userModel struct from a pointer to a JSON User struct
-func newUserRecord(u *models.User) (um *UserRecord, err error) {
+// NewUserRecord initializes a new pointer to a UserRecord struct from a pointer to a JSON User struct
+func NewUserRecord(u *models.User) (um *UserRecord, err error) {
 	um = &UserRecord{
 		Username:  u.Username,
 		Password:  u.Password,
@@ -62,7 +62,7 @@ func newUserRecord(u *models.User) (um *UserRecord, err error) {
 	return
 }
 
-// Update the userModel using an overwrite bson.D doc
+// Update the UserRecord using an overwrite bson.D doc
 func (u *UserRecord) Update(doc interface{}) (err error) {
 	data, err := utilities.BSONMarshall(doc)
 	if err != nil {
