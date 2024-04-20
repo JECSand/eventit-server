@@ -44,3 +44,25 @@ func (g *User) HashPassword() error {
 	}
 	return errors.New("no password set to hash in user model")
 }
+
+// UsersPage Multiple Users in a paginated response
+type UsersPage struct {
+	TotalCount int64   `json:"total_count"`
+	TotalPages int64   `json:"total_pages"`
+	Page       int64   `json:"page"`
+	Size       int64   `json:"size"`
+	HasMore    bool    `json:"has_more"`
+	Users      []*User `json:"users"`
+}
+
+/*
+// ToProto convert UsersRes to proto
+func (p *UsersRes) ToProto() []*usersService.User {
+	uList := make([]*usersService.User, 0, len(p.Users))
+	for _, u := range p.Users {
+		u.Password = ""
+		uList = append(uList, u.ToProto())
+	}
+	return uList
+}
+*/

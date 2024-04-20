@@ -204,3 +204,11 @@ func (u *UserRecord) ToRoot() *models.User {
 		DeletedAt: u.DeletedAt,
 	}
 }
+
+// LoadUserRecords ..
+func LoadUserRecords(ms []*UserRecord) (users []*models.User) {
+	for _, m := range ms {
+		users = append(users, m.ToRoot())
+	}
+	return
+}

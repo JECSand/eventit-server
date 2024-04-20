@@ -55,6 +55,7 @@ type DBCursor interface {
 	Next(ctx context.Context) bool
 	Decode(val interface{}) error
 	Close(ctx context.Context) error
+	Err() error
 }
 
 // checkCursorENV returns a DBCursor based on the ENV

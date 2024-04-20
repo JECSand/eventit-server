@@ -1,8 +1,11 @@
 package services
 
 import (
+	"context"
+	"errors"
 	"github.com/JECSand/eventit-server/domains/identity/src/models"
 	repos "github.com/JECSand/eventit-server/domains/identity/src/repositories"
+	"github.com/JECSand/eventit-server/domains/shared/utilities"
 )
 
 // UserService is used by the app to manage all user related controllers and functionality
@@ -72,13 +75,45 @@ func (us *UserService) FindById(id string) (user *models.User, err error) {
 }
 
 func (us *UserService) FindByEmail(email string) (user *models.User, err error) {
-	// TODO - Add basic email string validation here
-	user.Email = email
-	user, err = us.findOne(user)
+	if ok := utilities.IsValidEmail(email); ok {
+		user.Email = email
+		user, err = us.findOne(user)
+		return
+	}
+	err = errors.New("invalid email")
 	return
 }
 
-func (us *UserService) FindMany() (users []*models.User, err error) {
-	// TODO ADD LOGIC HERE
-	return
+func (us *UserService) Find(ctx context.Context, user *models.User, pagination *utilities.Pagination) (*models.UsersPage, error) {
+	userRec, err := repos.NewUserRecord(user)
+	if err != nil {
+		return &models.UsersPage{}, err
+	}
+	count, err := us.userRepo.Handler.Count(userRec)
+	if err != nil {
+		return &models.UsersPage{}, err
+	}
+	if count == 0 {
+		return &models.UsersPage{
+			TotalCount: 0,
+			TotalPages: 0,
+			Page:       0,
+			Size:       0,
+			HasMore:    false,
+			Users:      make([]*models.User, 0),
+		}, nil
+	}
+	userRecs, err := us.userRepo.Handler.PaginatedFind(ctx, userRec, pagination)
+	if err != nil {
+		return &models.UsersPage{}, err
+	}
+	users := repos.LoadUserRecords(userRecs)
+	return &models.UsersPage{
+		TotalCount: count,
+		TotalPages: int64(pagination.GetTotalPages(int(count))),
+		Page:       int64(pagination.GetPage()),
+		Size:       int64(pagination.GetSize()),
+		HasMore:    pagination.GetHasMore(int(count)),
+		Users:      users,
+	}, nil
 }

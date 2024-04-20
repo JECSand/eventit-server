@@ -2,8 +2,10 @@ package databases
 
 import (
 	"context"
+	"github.com/JECSand/eventit-server/domains/shared/utilities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"sync"
 	"time"
 )
@@ -68,6 +70,61 @@ func (h *DBRepo[T]) FindMany(filter T) ([]T, error) {
 		m = append(m, md)
 	}
 	return m, nil
+}
+
+// PaginatedFind is used to get a slice of dbModels from the db with custom filter
+func (h *DBRepo[T]) PaginatedFind(ctx context.Context, filter T, pagination *utilities.Pagination) ([]T, error) {
+	var m []T
+	f, err := filter.BsonFilter()
+	if err != nil {
+		return m, err
+	}
+	var cur *mongo.Cursor
+	limit := int64(pagination.GetLimit())
+	skip := int64(pagination.GetOffset())
+	if len(f) > 0 {
+		cur, err = h.Collection.Find(ctx, f, &options.FindOptions{
+			Limit: &limit,
+			Skip:  &skip,
+		})
+	} else {
+		cur, err = h.Collection.Find(ctx, bson.M{}, &options.FindOptions{
+			Limit: &limit,
+			Skip:  &skip,
+		})
+	}
+	if err != nil {
+		return m, err
+	}
+	cursor := checkCursorENV(cur)
+	defer cursor.Close(ctx)
+	m = make([]T, 0, pagination.GetSize())
+	for cursor.Next(ctx) {
+		var md T
+		if err = cursor.Decode(&md); err != nil {
+			return nil, err
+		}
+		err = md.PostProcess()
+		if err != nil {
+			return m, err
+		}
+		m = append(m, md)
+	}
+	if err = cursor.Err(); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// Count Function to update a dbModel from datasource with custom filter and update model
+func (h *DBRepo[T]) Count(filter T) (int64, error) {
+	f, err := filter.BsonFilter()
+	if err != nil {
+		return 0, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return h.Collection.CountDocuments(ctx, f)
 }
 
 // UpdateOne Function to update a dbModel from datasource with custom filter and update model
