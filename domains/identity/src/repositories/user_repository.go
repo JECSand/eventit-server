@@ -40,7 +40,6 @@ type UserRecord struct {
 	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at,omitempty"`
 	CreatedAt time.Time          `json:"created_at" bson:"created_at,omitempty"`
 	DeletedAt time.Time          `json:"deleted_at" bson:"deleted_at,omitempty"`
-	// GroupId      primitive.ObjectID `json:"id" bson:"group_id,omitempty"`
 }
 
 // NewUserRecord initializes a new pointer to a UserRecord struct from a pointer to a JSON User struct
@@ -98,10 +97,10 @@ func (u *UserRecord) Update(doc interface{}) (err error) {
 func (u *UserRecord) BsonLoad(doc bson.D) (err error) {
 	bData, err := utilities.BSONMarshall(doc)
 	if err != nil {
-		return err
+		return
 	}
 	err = bson.Unmarshal(bData, u)
-	return err
+	return
 }
 
 // Match compares an input bson doc and returns whether there's a match with the UserRecord

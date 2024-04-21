@@ -12,14 +12,14 @@ import (
 
 // BlacklistRepo is used by the app to manage all user related controllers and functionality
 type BlacklistRepo struct {
-	collection       databases.DBCollection
-	db               databases.DBClient
-	blacklistHandler *databases.DBRepo[*BlacklistRecord]
+	collection databases.DBCollection
+	db         databases.DBClient
+	Handler    *databases.DBRepo[*BlacklistRecord]
 }
 
 // NewBlacklistRepo is an exported function used to initialize a new BlacklistRepo struct
 func NewBlacklistRepo(db databases.DBClient) *BlacklistRepo {
-	collection := db.GetCollection("users")
+	collection := db.GetCollection("blacklist")
 	repoHandler := &databases.DBRepo[*BlacklistRecord]{
 		DB:         db,
 		Collection: collection,
@@ -34,8 +34,8 @@ type BlacklistRecord struct {
 	CreatedAt time.Time          `json:"created_at" bson:"created_at,omitempty"`
 }
 
-// newBlacklistRecord initializes a new pointer to a blacklistModel struct from a pointer to a JSON Blacklist struct
-func newBlacklistRecord(bl *models.Blacklist) (bm *BlacklistRecord, err error) {
+// NewBlacklistRecord initializes a new pointer to a BlacklistRecord struct from a pointer to a JSON Blacklist struct
+func NewBlacklistRecord(bl *models.Blacklist) (bm *BlacklistRecord, err error) {
 	bm = &BlacklistRecord{
 		AuthToken: bl.AuthToken,
 		UpdatedAt: bl.UpdatedAt,
