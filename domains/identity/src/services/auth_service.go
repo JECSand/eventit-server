@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"github.com/JECSand/eventit-server/domains/identity/src/models"
 	repos "github.com/JECSand/eventit-server/domains/identity/src/repositories"
 )
@@ -20,15 +21,19 @@ func NewAuthService(userService *UserService, blHandler *repos.BlacklistRepo) *A
 }
 
 func (us *AuthService) Login(user *models.User) (*models.User, error) {
-	//userRec, err := repos.NewUserRecord(user)
-	//if err != nil {
-	//	return user, err
-	//}
-	/*
-		userRec, err = us.userRepo.Handler.UpdateOne(&repos.UserRecord{Id: userRec.Id}, userRec)
-		if err != nil {
-			return user, err
-		}
-	*/
-	return user, nil
+	if user.Password == "" {
+		return user, errors.New("password is empty")
+	}
+	if user.Email == "" {
+		return user, errors.New("email is empty")
+	}
+	foundUser, err := us.userService.FindByEmail(user.Email)
+	if err != nil {
+		return user, err
+	}
+	if err = foundUser.Authenticate(user.Password); err != nil {
+		return user, err
+	}
+	// TODO - Generate auth token here and change response struct.
+	return foundUser, nil
 }
