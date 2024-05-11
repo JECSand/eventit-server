@@ -4,12 +4,13 @@ import (
 	"errors"
 	"github.com/JECSand/eventit-server/domains/identity/src/models"
 	repos "github.com/JECSand/eventit-server/domains/identity/src/repositories"
+	"time"
 )
 
 // AuthService is used by the app to manage all user related controllers and functionality
 type AuthService struct {
 	userService *UserService
-	blRepo      *repos.BlacklistRepo
+	blacklist   *repos.BlacklistRepo
 }
 
 // NewAuthService is an exported function used to initialize a new UserService struct
@@ -20,20 +21,47 @@ func NewAuthService(userService *UserService, blHandler *repos.BlacklistRepo) *A
 	}
 }
 
-func (us *AuthService) Login(user *models.User) (*models.User, error) {
-	if user.Password == "" {
-		return user, errors.New("password is empty")
+func (us *AuthService) Login(credentials *models.Credentials) (*models.Auth, error) {
+	auth := &models.Auth{CreatedAt: time.Now().UTC()}
+	if credentials.Password == "" {
+		return auth, errors.New("password is empty")
 	}
-	if user.Email == "" {
-		return user, errors.New("email is empty")
+	if credentials.Email == "" {
+		return auth, errors.New("email is empty")
 	}
-	foundUser, err := us.userService.FindByEmail(user.Email)
+	foundUser, err := us.userService.FindByEmail(credentials.Email)
 	if err != nil {
-		return user, err
+		return auth, err
 	}
-	if err = foundUser.Authenticate(user.Password); err != nil {
-		return user, err
+	if err = auth.Authenticate(foundUser, credentials.Password); err != nil {
+		return auth, err
 	}
-	// TODO - Generate auth token here and change response struct.
-	return foundUser, nil
+	return auth, nil
+}
+
+func (us *AuthService) Logout(auth *models.Auth) error {
+	if auth.AuthToken == "" {
+		return errors.New("token is empty")
+	}
+	_, err := us.blacklist.Handler.InsertOne(&repos.BlacklistRecord{AuthToken: auth.AuthToken})
+	if err == nil {
+		return err
+	}
+	auth.Invalidate()
+	return nil
+}
+
+func (us *AuthService) Validate(auth *models.Auth) error {
+	if auth.AuthToken == "" {
+		return errors.New("token is empty")
+	}
+	if err := auth.LoadSession(); err != nil {
+		return err
+	}
+	foundUser, err := us.userService.FindById(auth.Session.ProfileId)
+	if err != nil {
+		return err
+	}
+	auth.User = foundUser
+	return nil
 }

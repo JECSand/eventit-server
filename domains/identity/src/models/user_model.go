@@ -21,16 +21,6 @@ type User struct {
 	DeletedAt time.Time  `json:"deleted_at,omitempty"`
 }
 
-// Authenticate compares an input password with the hashed password stored in the User model
-func (g *User) Authenticate(checkPassword string) error {
-	if len(g.Password) != 0 {
-		password := []byte(g.Password)
-		cPassword := []byte(checkPassword)
-		return bcrypt.CompareHashAndPassword(password, cPassword)
-	}
-	return errors.New("no password set to hash in user model")
-}
-
 // HashPassword hashes a user password and associates it with the user struct
 func (g *User) HashPassword() error {
 	if len(g.Password) != 0 {
